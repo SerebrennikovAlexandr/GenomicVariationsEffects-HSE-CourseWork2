@@ -1,0 +1,1 @@
+bedtools intersect -a random_sample.bed -b ENCFF503TXI_intersect.bed -v > random_sample_intersected.bed
