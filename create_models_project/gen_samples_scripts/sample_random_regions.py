@@ -1,6 +1,7 @@
 import random
-import sys
-import optparse
+
+
+# ----- Settings part -----
 
 
 PATH_TO_FASTA_FILE = '../hg19_human/hg19.fasta'
@@ -8,6 +9,9 @@ PATH_TO_BED_FILE = '../tissues/H3K4me3/ENCFF503TXI.bed'
 PATH_TO_SAVE_RESULTS = '../gen_samples_data/H3K4me3/random_sample.bed'
 tol = 0.01
 number_samples_per_region = 50
+
+
+# ----- Service functions -----
 
 
 def read_bed_file(PATH_TO_BED_FILE):
@@ -78,13 +82,15 @@ if __name__ == '__main__':
             rnd_start = rnd_pos
             rnd_end = rnd_pos + dist
 
-            ###-----calculate G and C content for initial sequence
+            # --- Calculate G and C content for initial sequence
+
             sequenceINIT = seqID_fasta[chr][start:end]
             G_init = sequenceINIT.count("G")
             C_init = sequenceINIT.count("C")
             GC_perc_init = (G_init + C_init)/float(end-start)
 
-            ###----Calculate G an C content for random sequence----###
+            # --- Calculate G an C content for random sequence
+
             sequenceRND = seqID_fasta[chr_rnd][rnd_start:rnd_end]
             if "N" not in sequenceRND:
                 G_rnd = sequenceRND.count("G")

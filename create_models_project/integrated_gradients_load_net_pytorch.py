@@ -10,6 +10,8 @@ from captum.attr import IntegratedGradients, DeepLift
 from conv_pytorch_binary_classifier import Multiple_Input_Model
 from deeplift.visualization import viz_sequence
 from scipy.stats import zscore
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 ########################################################################
@@ -229,13 +231,6 @@ if __name__ == '__main__':
     X_input = X_input.float()
     print("Input sequence shape: " + str(X_input.shape))
 
-    '''
-    Y_input = get_2d_label_matrix(1, 1)
-    Y_input = torch.from_numpy(Y_input[0])
-    Y_input = Y_input.float()
-    print("Target: " + str(Y_input))
-    '''
-
     X_input = Variable(X_input)
     print("Shape of X_input before permutation: " + str(X_input.shape))
     X_input = X_input.permute(0, 2, 1).contiguous()
@@ -264,6 +259,7 @@ if __name__ == '__main__':
     CNN.eval()
 
     ig = IntegratedGradients(CNN)
+    #ig = DeepLift(CNN)
     attributions, delta = ig.attribute(X_input, target=1, return_convergence_delta=True)
 
     attributions = attributions.cpu().numpy()
@@ -276,6 +272,10 @@ if __name__ == '__main__':
     print("Z scores:")
     output_vect = output_tensor_to_1d_vector(attributions)
     z_scores = np.array(zscore(output_vect))
-    #print(z_scores)
+    print(z_scores.min())
+    print(z_scores.max())
+    print("Z scores hist:")
+    sns.distplot(z_scores)
+    plt.bar(np.arange(1, 1001), z_scores)
     print("Image:")
     viz_sequence.plot_weights(attributions, subticks_frequency=10, figsize=(50, 5))
