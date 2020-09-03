@@ -4,7 +4,7 @@ import random
 # ----- Settings part -----
 
 
-PATH_TO_FASTA_FILE = '../hg19_human/hg19.fasta'
+PATH_TO_FASTA_FILE = '../../hg_assemblies/hg19/hg19.fasta'
 PATH_TO_BED_FILE = '../tissues/H3K4me3/ENCFF503TXI.bed'
 PATH_TO_SAVE_RESULTS = '../gen_samples_data/H3K4me3/random_sample.bed'
 tol = 0.01

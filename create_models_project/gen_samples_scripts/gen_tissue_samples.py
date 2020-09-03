@@ -5,6 +5,7 @@ from random import sample, seed
 # ----- Settings part -----
 
 
+PATH_TO_HG = r"../../hg_assemblies/hg19/hg19_"
 PATH_TO_TISSUE_FILE = r"../tissues/H3K4me3/ENCFF503TXI.bed"
 PATH_TO_SAVE_LEARN = r"../gen_samples_data/H3K4me3/train_data/H3K4me3_learn.fasta"
 PATH_TO_SAVE_TEST = r"../gen_samples_data/H3K4me3/train_data/H3K4me3_test.fasta"
@@ -14,7 +15,7 @@ PATH_TO_SAVE_TEST = r"../gen_samples_data/H3K4me3/train_data/H3K4me3_test.fasta"
 
 
 def update_sequence(postfix):
-    fin = open(r"../hg19_human/hg19_" + postfix + ".fasta", 'r')
+    fin = open(PATH_TO_HG + postfix + ".fasta", 'r')
     seq = "".join(str(x)[:-1] for x in fin.readlines())
     seq = seq[len("assembly") + seq.find("assembly"):]
     fin.close()

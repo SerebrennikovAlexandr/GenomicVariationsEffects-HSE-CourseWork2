@@ -1,8 +1,8 @@
 # ----- Settings part -----
 
 
-PATH_TO_ASSEMBLY = '../hg19_human/hg19.fa'
-PATH_TO_FASTA_FILE = '../hg19_human/hg19.fasta'
+PATH_TO_ASSEMBLY = '../../hg_assemblies/hg19/hg19.fa'
+PATH_TO_FASTA_FILE = '../../hg_assemblies/hg19/hg19.fasta'
 
 
 # ----- Service functions -----

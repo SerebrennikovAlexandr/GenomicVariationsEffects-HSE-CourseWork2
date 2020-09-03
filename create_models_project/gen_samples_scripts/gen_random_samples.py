@@ -5,6 +5,7 @@ from random import sample, randint, seed
 # ----- Settings part -----
 
 
+PATH_TO_HG = r"../../hg_assemblies/hg19/hg19_"
 PATH_TO_RANDOM_SAMPLE_FILE = r"../gen_samples_data/H3K4me3/random_sample_intersected.bed"
 PATH_TO_SAVE_RANDOM_LEARN = r"../gen_samples_data/H3K4me3/train_data/H3K4me3_random_learn.fasta"
 PATH_TO_SAVE_RANDOM_TEST = r"../gen_samples_data/H3K4me3/train_data/H3K4me3_random_test.fasta"
@@ -14,7 +15,7 @@ PATH_TO_SAVE_RANDOM_TEST = r"../gen_samples_data/H3K4me3/train_data/H3K4me3_rand
 
 
 def update_sequence(postfix):
-    fin = open(r"../hg19_human/hg19_" + postfix + ".fasta", 'r')
+    fin = open(PATH_TO_HG + postfix + ".fasta", 'r')
     seq = "".join(str(x)[:-1] for x in fin.readlines())
     seq = seq[len("assembly") + seq.find("assembly"):]
     fin.close()
