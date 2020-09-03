@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Variation effects</title>
+
+    <link rel="stylesheet" type="text/css" href="index.css">
+</head>
+
+<body>
+
+    <h2>Расчёт эффектов некодирующих геномных вариаций</h2>
+
+    <hr />
+
+    <p>Укажите параметры эксперимента:</p>
+    <p></p>
+
+    <form name="self_input_form" method="post">
+        <div class="type_choice">
+
+            <!--
+           <div class="type_choice_bar">
+               <p>Сборка генома:</p>
+
+               <select name="select_assembly" required>
+                   <option>   </option>
+                   <option>hg19 genome assembly</option>
+               </select>
+           </div>
+           -->
+
+           <div class="type_choice_bar">
+               <p>Тип ткани (используется сборка генома hg19 - GRCh37):</p>
+
+               <select name="select_tissue" required>
+                   <option>Histone H3K4me3 of CD19 Primary Cells</option>
+               </select>
+           </div>
+
+        </div>
+
+        <p></p>
+
+        <div class="input_form">
+            <fieldset>
+                <legend><strong>Введите данные вручную:</strong></legend>
+
+                <div class="input_form_field">
+                    <p>Хромосома:</p>
+
+                   <select name="select_chromosome" required>
+                       <option>chr1</option>
+                       <option>chr2</option>
+                       <option>chr3</option>
+                       <option>chr4</option>
+                       <option>chr5</option>
+                       <option>chr6</option>
+                       <option>chr7</option>
+                       <option>chr8</option>
+                       <option>chr9</option>
+                       <option>chr10</option>
+                       <option>chr11</option>
+                       <option>chr12</option>
+                       <option>chr13</option>
+                       <option>chr14</option>
+                       <option>chr15</option>
+                       <option>chr17</option>
+                       <option>chr18</option>
+                       <option>chr19</option>
+                       <option>chr20</option>
+                       <option>chr21</option>
+                       <option>chr22</option>
+                       <option>chrX</option>
+                       <option>chrY</option>
+                   </select>
+                </div>
+
+                <div class="input_form_field">
+                    <p>Позиция:</p>
+
+                    <input type="text" name="position" required>
+                </div>
+
+                <div class="input_form_field">
+                    <p>Нуклеотид:</p>
+
+                    <select name="select_nucleotide" required>
+                       <option>A</option>
+                       <option>C</option>
+                       <option>T</option>
+                       <option>G</option>
+                   </select>
+                </div>
+
+                <p></p>
+                <input type="submit" id="submit_btn1" value="Рассчитать">
+            </fieldset>
+        </div>
+    </form>
+
+    <p></p>
+
+    <form name="file_input">
+        <div class="file_input_form">
+            <fieldset>
+                <legend><strong>Загрузите данные файлом:</strong></legend>
+
+                <div class="file_description">
+                    <p>Файл с расширением .txt,<br>в котором построчно указаны данные в формате:</p>
+                    <p>chr1 25000 25001 A G</p>
+                    <p></p>
+                </div>
+
+                <div class="file_input_panel">
+                    <input type="file" id="file_input_field" required>
+                    <p></p>
+                    <input type="submit" id="submit_btn2" value="Рассчитать">
+                </div>
+            </fieldset>
+        </div>
+    </form>
+
+    <script src="index.js"></script>
+
+</body>
+
+</html>
