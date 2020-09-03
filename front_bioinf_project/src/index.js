@@ -42,10 +42,8 @@ function single_experiment(e) {
     var formData = new FormData();
 
     ajaxForm("http://localhost:8000/api/send-self-input-form", "POST", formData, (response) => {
-
+        console.log(response)
     });
-
-    console.log("kek")
 }
 
 let submit_btn1 = document.getElementById("submit_btn1");
