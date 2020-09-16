@@ -1,15 +1,13 @@
-import torch
-import numpy as np
-from torch.autograd import Variable
-from sklearn.preprocessing import OneHotEncoder
-import sys
-import torch.utils.data as data_utils
-import torch.nn as nn
+from biomodel_handler.data_loader import slice_single_fasta_sequence, load_net
+from biomodel_handler.net_classes import Multiple_Input_Model
+from biomodel_handler.bio_plot import plot_weights
 from captum.attr import IntegratedGradients
-from deeplift.visualization import viz_sequence
+import matplotlib.pyplot as plt
 from scipy.stats import zscore
 import seaborn as sns
-import matplotlib.pyplot as plt
+import numpy as np
+import torch
+
 
 ########################################################################
 # The output of torchvision datasets are PILImage images of range [0, 1].
@@ -23,183 +21,9 @@ DEVICE_ID = 0
 LABEL_POS = 1
 LABEL_NEG = 0
 SEQ_LENGTH = 1000
-LEARNING_RATE = 0.15
-BATCH_SIZE = 32
-
-PATH_TO_INPUT_FILE = r"../../create_models_project/gen_samples_data/H3K4me3/input.fasta"
-PATH_TO_SAVE_BEST = r"../../model_results/H3K4me3/best_model/best_checkpoint.pt"
 
 
-# ----- Save-load net part -----
-
-
-def load_ckp(checkpoint_fpath, model):
-    """
-    checkpoint_path: path to save checkpoint
-    model: model that we want to load checkpoint parameters into
-    """
-    # load check point
-    checkpoint = torch.load(checkpoint_fpath)
-    # initialize state_dict from checkpoint to model
-    model.load_state_dict(checkpoint['state_dict'])
-    # initialize valid_loss_min from checkpoint to valid_loss_min
-    valid_loss_min = checkpoint['valid_loss_min']
-    # return model, epoch value, min validation loss
-    return model, checkpoint['epoch'], valid_loss_min
-
-
-# ----- Net-defining part -----
-
-
-class Multiple_Input_Model(nn.Module):
-    def __init__(self):
-        super(Multiple_Input_Model, self).__init__()
-        self.conv1 = nn.Conv1d(in_channels=4, out_channels=300, kernel_size=8, stride=1)
-        self.conv2 = nn.Conv1d(in_channels=300, out_channels=300, kernel_size=5, stride=1)
-        self.conv3 = nn.Conv1d(in_channels=300, out_channels=150, kernel_size=4, stride=1)
-        self.conv4 = nn.Conv1d(in_channels=150, out_channels=150, kernel_size=4, stride=1)
-        self.conv5 = nn.Conv1d(in_channels=150, out_channels=300, kernel_size=4, stride=1)
-        self.conv6 = nn.Conv1d(in_channels=300, out_channels=300, kernel_size=4, stride=1)
-        self.conv7 = nn.Conv1d(in_channels=300, out_channels=256, kernel_size=4, stride=1)
-        self.conv8 = nn.Conv1d(in_channels=256, out_channels=256, kernel_size=4, stride=1)
-        self.relu = nn.ELU(inplace=True)
-        self.bn1 = nn.BatchNorm1d(num_features=300)
-        self.bn2 = nn.BatchNorm1d(num_features=300)
-        self.bn3 = nn.BatchNorm1d(num_features=150)
-        self.bn4 = nn.BatchNorm1d(num_features=150)
-        self.bn5 = nn.BatchNorm1d(num_features=300)
-        self.bn6 = nn.BatchNorm1d(num_features=300)
-        self.bn7 = nn.BatchNorm1d(num_features=256)
-        self.bn8 = nn.BatchNorm1d(num_features=256)
-        self.bn_fc_1 = nn.BatchNorm1d(num_features=256)
-        self.bn_fc_2 = nn.BatchNorm1d(num_features=128)
-        self.bn_fc_3 = nn.BatchNorm1d(num_features=2)
-
-        self.mp_1 = nn.MaxPool1d(kernel_size=2, stride=1)
-        self.mp_2 = nn.MaxPool1d(kernel_size=2, stride=1)
-        self.mp_3 = nn.MaxPool1d(kernel_size=2, stride=1)
-        self.mp_4 = nn.MaxPool1d(kernel_size=2, stride=1)
-        self.mp_5 = nn.MaxPool1d(kernel_size=2, stride=1)
-        self.mp_6 = nn.MaxPool1d(kernel_size=2, stride=1)
-        self.mp_7 = nn.MaxPool1d(kernel_size=2, stride=1)
-        self.mp_8 = nn.MaxPool1d(kernel_size=2, stride=1)
-
-        self.avg_pool = nn.AvgPool1d(kernel_size=2, stride=2)
-        self.do = nn.Dropout(p=0.30)
-        self.do_conv = nn.Dropout(p=0.40)
-        self.l1 = nn.Linear(296400, 256)
-        self.l2 = nn.Linear(256, 128)
-        self.l3 = nn.Linear(128, 2)
-        self.softmax_output = nn.Sigmoid()
-
-    def forward(self, x):
-        # -- Do convolution -- #
-        x = self.conv_layers1(x)
-        x = self.conv_layers2(x)
-        # x = self.conv_layers3(x)
-        # x = self.conv_layers4(x)
-        # x = self.conv_layers5(x)
-        # x = self.conv_layers6(x)
-        # x = self.conv_layers7(x)
-        # x = self.conv_layers8(x)
-
-        # -- Do ReLu -- #
-        N, _, _ = x.size()
-        x = x.view(N, -1)
-
-        x = self.linear_layer1(x)
-        x = self.linear_layer2(x)
-        x = self.linear_layer3(x)
-        x = self.softmax_output(x)
-        return x
-
-    def conv_layers1(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.do_conv(x)
-        # x = self.mp_1(x)
-        return x
-
-    def conv_layers2(self, x):
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = self.relu(x)
-        # x = self.do_conv(x)
-        x = self.mp_2(x)
-        return x
-
-    def conv_layers3(self, x):
-        x = self.conv3(x)
-        x = self.relu(x)
-        x = self.bn3(x)
-        x = self.do_conv(x)
-        # x = self.mp_3(x)
-        return x
-
-    def conv_layers4(self, x):
-        x = self.conv4(x)
-        x = self.relu(x)
-        x = self.bn4(x)
-        # x = self.do_conv(x)
-        x = self.mp_4(x)
-        return x
-
-    def conv_layers5(self, x):
-        x = self.conv5(x)
-        x = self.relu(x)
-        x = self.bn5(x)
-        x = self.do_conv(x)
-        # x = self.mp_5(x)
-        return x
-
-    def conv_layers6(self, x):
-        x = self.conv6(x)
-        x = self.relu(x)
-        x = self.bn6(x)
-        # x = self.do_conv(x)
-        x = self.mp_6(x)
-        return x
-
-
-    def conv_layers7(self, x):
-        x = self.conv7(x)
-        x = self.relu(x)
-        x = self.bn7(x)
-        x = self.do_conv(x)
-        # x = self.mp_7(x)
-        return x
-
-    def conv_layers8(self, x):
-        x = self.conv8(x)
-        x = self.relu(x)
-        x = self.bn8(x)
-        # x = self.do_conv(x)
-        x = self.mp_8(x)
-        return x
-
-    def linear_layer1(self, x):
-        x = self.l1(x)
-        x = self.bn_fc_1(x)
-        x = self.relu(x)
-        x = self.do(x)
-        return x
-
-    def linear_layer2(self, x):
-        x = self.l2(x)
-        x = self.bn_fc_2(x)
-        x = self.relu(x)
-        # x = self.do(x)
-        return x
-
-    def linear_layer3(self, x):
-        x = self.l3(x)
-        x = self.relu(x)
-        # x = self.do(x)
-        return x
-
-
-# ----- Working with DATA part -----
+# ----- Working with DATA functions part -----
 
 
 def decode_one_hot_class_labels(tensor_with_true_scores):
@@ -224,36 +48,6 @@ def get_scores_pos_class_labels(tensor_with_true_scores):
         vector_with_labels.append(tensor_with_true_scores[row_idx, pos_idx].item())
 
     return np.array(vector_with_labels)
-
-
-def read_fastafile(filename):
-    """
-    Read a file in FASTA format
-    Arguments:
-    filename -- string, the name of the sequence file in FASTA format
-    Return:
-    list of sequences, list of sequence ids
-    """
-    ids = []
-    seqs = []
-    try:
-        f = open(filename, 'r')
-        lines = f.readlines()
-        f.close()
-    except:
-        sys.exit(0)
-    seq = []
-    for line in lines:
-        if line[0] == '>':
-            fasta_id = line[1:].rstrip('\n')
-            ids.append(line[1:].rstrip('\n'))
-            if seq != []: seqs.append("".join(seq))
-            seq = []
-        else:
-            seq.append(line.rstrip('\n').upper())
-    if seq != []:
-        seqs.append("".join(seq))
-    return seqs, ids
 
 
 # --- create np array with zeros --- #
@@ -290,18 +84,13 @@ def seq_to_one_hot_fill_in_array(zeros_array, sequence, one_hot_axis):
             zeros_array[i, char_idx] = 1
 
 
-def get_train_loader(dataset, batch_size):
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=3)
-    return (train_loader)
-
-
-def get_3d_feature_matrix(PATH_TO_FASTA_FILE):
+def get_single_3d_feature_matrix(path_to_hg, chr, pos, nucleo):
     # кол-во нуклеотидов в одном сэмпле (1000 в нашем случае)
     num_nucleotides = SEQ_LENGTH
 
-    # считывание фаста файла с тканью для обучения модели
-    # в первой переменной лежит массив всех последовательностей, во второй - их заголовков (с хромосомой и позицией)
-    seqs, ids = read_fastafile(PATH_TO_FASTA_FILE)
+    seqs, ids = slice_single_fasta_sequence(chr, pos, nucleo, path_to_hg)
+    if len(seqs[0]) != 1000:
+        raise RuntimeError("Unsupported amount of features")
 
     # кол-во последовательностей в файле
     n_rows = len(ids)
@@ -324,30 +113,6 @@ def get_3d_feature_matrix(PATH_TO_FASTA_FILE):
     return X_data_matrix
 
 
-def get_2d_label_matrix(ids_pos, ids_neg):
-    # создаётся массив длинной, равной кол-ву посл-тей во всей тренировочной выборке и размечается 1 и 0
-    # данный массив - массив с отметками о принадлежности классу
-    y_labels_onehot = []
-    for i in range(ids_pos):
-        y_labels_onehot.append(LABEL_POS)
-    for i in range(ids_neg):
-        y_labels_onehot.append(LABEL_NEG)
-
-    # массив становится нумпаевским массивом
-    y_labels_onehot = np.array(y_labels_onehot)
-
-    # добавляем массиву вторую размерность, массив становится двумерным с размером {ids_pos + ids_neg}х1
-    # (80000 одномерных массивов)
-    y_labels_onehot = y_labels_onehot.reshape(-1, 1)
-
-    # преобразовываем каждый из внутренних массивов длины 1 в массив длиной два
-    # то есть делаем бинарное отображение категорий (т.е. ответов - ткань или не ткань)
-    onehot_encoder = OneHotEncoder(sparse=False, categories='auto')
-    y_labels_onehot = onehot_encoder.fit_transform(y_labels_onehot)
-
-    return y_labels_onehot
-
-
 def output_tensor_to_1d_vector(attributions):
     l = attributions.shape[2]
     res = []
@@ -367,39 +132,54 @@ def output_tensor_to_1d_vector(attributions):
 # ----- Main part -----
 
 
-if __name__ == '__main__':
+def get_z_scores(attributions):
+    output_vect = output_tensor_to_1d_vector(attributions)
+    z_scores = np.array(zscore(output_vect))
+    return z_scores
+
+
+def plot_distplot(z_scores, pic_name_unique):
+    plot = sns.distplot(z_scores)
+    plot.figure.savefig(r"user_media/dist_" + pic_name_unique + ".png")
+    plt.clf()
+
+
+def plot_barplot(z_scores, pic_name_unique):
+    plt.bar(np.arange(1, 1001), z_scores)
+    plt.savefig(r"user_media/bar_" + pic_name_unique + ".png")
+    plt.clf()
+
+
+def plot_bioinf_weights(attributions, pic_name_unique):
+    fig = plot_weights(attributions, subticks_frequency=10, figsize=(50, 5))
+    fig.savefig(r"user_media/bio_" + pic_name_unique + ".png")
+    plt.close(fig)
+    fig.clf()
+    plt.clf()
+
+
+def get_single_experiment_scores(path_to_hg, path_to_net, chr, pos, nucleo, pic_name_unique):
 
     # --- Preparing tensor from the input file ---
 
-    X_input = get_3d_feature_matrix(PATH_TO_INPUT_FILE)
+    X_input = get_single_3d_feature_matrix(path_to_hg, chr, pos, nucleo)
     X_input = torch.from_numpy(X_input)
     X_input = X_input.float()
-    print("Input sequence shape: " + str(X_input.shape))
-
-    X_input = Variable(X_input)
-    print("Shape of X_input before permutation: " + str(X_input.shape))
     X_input = X_input.permute(0, 2, 1).contiguous()
-    print("Shape of X_input after permutation: " + str(X_input.shape))
 
     # --- Preparing the model ---
 
     use_gpu = torch.cuda.is_available()
-    print("CUDA status: ", use_gpu)
 
     CNN = Multiple_Input_Model()
 
     if use_gpu:
-        gpu_ids = [0]
-        print("Send Model to Cuda")
         CNN = torch.nn.DataParallel(CNN, device_ids=[0])
         X_input = X_input.to(DEVICE_ID)
 
     # --- Loading net and getting metrics ---
 
-    CNN, start_epoch, valid_loss_min = load_ckp(PATH_TO_SAVE_BEST, CNN)
-    # print("model = ", CNN)
-    print("start_epoch = ", start_epoch)
-    print("valid_loss_min = ", valid_loss_min)
+    CNN, start_epoch, valid_loss_min = load_net(path_to_net, CNN)
 
     CNN.eval()
 
@@ -408,20 +188,16 @@ if __name__ == '__main__':
     attributions, delta = ig.attribute(X_input, target=1, return_convergence_delta=True)
 
     attributions = attributions.cpu().numpy()
-    print("Attributions (ACGT): ")
-    print(attributions)
-    print("Delta: ")
-    print(delta.item())
-    print("Attributions shape: ")
-    print(attributions.shape)
-    print("Z scores:")
-    output_vect = output_tensor_to_1d_vector(attributions)
-    z_scores = np.array(zscore(output_vect))
-    print(z_scores.min())
-    print(z_scores.max())
-    print("Z scores hist:")
-    plt.bar(np.arange(1, 1001), z_scores)
-    plt.show()
-    sns.distplot(z_scores)
-    print("Image:")
-    viz_sequence.plot_weights(attributions, subticks_frequency=10, figsize=(50, 5))
+
+    z_scores = get_z_scores(attributions)
+
+    plot_barplot(z_scores, pic_name_unique)
+    plot_distplot(z_scores, pic_name_unique)
+    plot_bioinf_weights(attributions, pic_name_unique)
+
+    most_features = []
+    for i in range(len(z_scores)):
+        if abs(z_scores[i] > 3):
+            most_features.append(pos - 500 + i)
+
+    return most_features

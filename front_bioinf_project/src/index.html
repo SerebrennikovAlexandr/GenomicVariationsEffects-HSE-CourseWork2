@@ -13,27 +13,27 @@
 
     <hr />
 
-    <p>Укажите параметры эксперимента:</p>
+    <p><strong>Укажите параметры эксперимента:</strong></p>
     <p></p>
 
-    <form name="self_input_form" action="http://127.0.0.1:8000/api/send-self-input-form" method="post">
-        <div class="type_choice">
+    <form id="self_input_form" name="self_input_form" method="post">
+        <div id="type_choice" class="type_choice">
 
-            <!--
            <div class="type_choice_bar">
                <p>Сборка генома:</p>
 
-               <select name="select_assembly" required>
-                   <option>   </option>
+               <select id="select_assembly" name="select_assembly" required>
                    <option>hg19 genome assembly</option>
                </select>
            </div>
-           -->
 
            <div class="type_choice_bar">
+                <!--
                <p>Тип ткани (используется сборка генома hg19 - GRCh37):</p>
+               -->
+               <p>Тип ткани:</p>
 
-               <select name="select_tissue" required>
+               <select id="select_tissue" name="select_tissue" required>
                    <option>Histone H3K4me3 of CD19 Primary Cells</option>
                </select>
            </div>
@@ -49,7 +49,7 @@
                 <div class="input_form_field">
                     <p>Хромосома:</p>
 
-                   <select name="select_chromosome" required>
+                   <select id="select_chromosome" name="select_chromosome" required>
                        <option>chr1</option>
                        <option>chr2</option>
                        <option>chr3</option>
@@ -79,13 +79,13 @@
                 <div class="input_form_field">
                     <p>Позиция:</p>
 
-                    <input type="text" name="position" required>
+                    <input id="position" type="number" name="position" min=1 required>
                 </div>
 
-                <div class="input_form_field">
+                <div id="input_form_field" class="input_form_field">
                     <p>Нуклеотид:</p>
 
-                    <select name="select_nucleotide" required>
+                    <select id="select_nucleotide" name="select_nucleotide" required>
                        <option>A</option>
                        <option>C</option>
                        <option>T</option>
@@ -94,15 +94,15 @@
                 </div>
 
                 <p></p>
-                <input type="submit" id="submit_btn1" value="Рассчитать">
+                <input id="submit_btn1" type="submit" value="Рассчитать">
             </fieldset>
         </div>
     </form>
 
     <p></p>
 
-    <form name="file_input">
-        <div class="file_input_form">
+    <form id="file_input" name="file_input">
+        <div id="file_input_form" class="file_input_form">
             <fieldset>
                 <legend><strong>Загрузите данные файлом:</strong></legend>
 
@@ -112,7 +112,7 @@
                     <p></p>
                 </div>
 
-                <div class="file_input_panel">
+                <div id="file_input_panel" class="file_input_panel">
                     <input type="file" id="file_input_field" required>
                     <p></p>
                     <input type="submit" id="submit_btn2" value="Рассчитать">
@@ -121,9 +121,11 @@
         </div>
     </form>
 
-    <!--
+    <hr />
+
+    <div id="anchor"></div>
+
     <script src="index.js"></script>
-    -->
 
 </body>
 
