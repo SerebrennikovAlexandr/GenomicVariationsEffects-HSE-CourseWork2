@@ -5,6 +5,29 @@ import os
 # ----- Main part -----
 
 
+def read_single_sequence_fastafile(lines):
+    ids = []
+    seqs = []
+
+    seq = []
+    for line in lines:
+        if line[0] == '>':
+            fasta_id = line[1:].rstrip('\n')
+            ids.append(fasta_id)
+
+            if seq != []:
+                seqs.append("".join(seq))
+
+            seq = []
+        else:
+            seq.append(line.rstrip('\n').upper())
+
+    if seq != []:
+        seqs.append("".join(seq))
+
+    return seqs, ids
+
+
 # Загрузка последовательности
 def update_sequence(postfix, path_to_hg):
     fin = open(path_to_hg + postfix + ".fasta", 'r')

@@ -1,4 +1,4 @@
-from biomodel_handler.data_loader import slice_single_fasta_sequence, load_net
+from biomodel_handler.data_loader import slice_single_fasta_sequence, load_net, read_single_sequence_fastafile
 from biomodel_handler.net_classes import Multiple_Input_Model
 from biomodel_handler.bio_plot import plot_weights
 from captum.attr import IntegratedGradients
@@ -84,7 +84,40 @@ def seq_to_one_hot_fill_in_array(zeros_array, sequence, one_hot_axis):
             zeros_array[i, char_idx] = 1
 
 
-def get_single_3d_feature_matrix(path_to_hg, chr, pos, nucleo):
+def get_fasta_file_3d_feature_matrix(file_readlines):
+    # кол-во нуклеотидов в одном сэмпле (1000 в нашем случае)
+    num_nucleotides = SEQ_LENGTH
+
+    # считывание фаста файла с тканью для обучения модели
+    # в первой переменной лежит массив всех последовательностей, во второй - их заголовков (с хромосомой и позицией)
+    seqs, ids = read_single_sequence_fastafile(file_readlines)
+    if len(seqs[0]) != 1000:
+        raise RuntimeError("Unsupported amount of features")
+
+    # кол-во последовательностей в файле
+    n_rows = len(ids)
+
+    ids = [x[x.find(':') + 1:x.find('-')] for x in ids]
+
+    # создание трёхмерного массива:
+    # x: кол-во последовательностей в файле
+    # y: кол-во нуклеотидов в одном сэмпле
+    # z: 4 - ACGT
+    X_data_matrix = np.zeros((n_rows, num_nucleotides, 4))
+
+    # функция enumerate генерирует кортежи, состоящие из двух элементов - индекса элемента и самого элемента
+    # форматирование в бинарный формат файла
+    for i, fasta_seq in enumerate(seqs):
+        one_hot_encoded = one_hot_encode_along_channel_axis(fasta_seq)
+        X_data_matrix[i, :, :] = one_hot_encoded
+
+    # если есть NaN
+    X_data_matrix[np.isnan(X_data_matrix)] = 0
+
+    return X_data_matrix, ids
+
+
+def get_single_slice_3d_feature_matrix(path_to_hg, chr, pos, nucleo):
     # кол-во нуклеотидов в одном сэмпле (1000 в нашем случае)
     num_nucleotides = SEQ_LENGTH
 
@@ -140,29 +173,30 @@ def get_z_scores(attributions):
 
 def plot_distplot(z_scores, pic_name_unique):
     plot = sns.distplot(z_scores)
-    plot.figure.savefig(r"user_media/dist_" + pic_name_unique + ".png")
+    plot.figure.savefig(r"../front_bioinf_project/src/media/dist_" + pic_name_unique + ".png")
     plt.clf()
 
 
 def plot_barplot(z_scores, pic_name_unique):
-    plt.bar(np.arange(1, 1001), z_scores)
-    plt.savefig(r"user_media/bar_" + pic_name_unique + ".png")
-    plt.clf()
-
-
-def plot_bioinf_weights(attributions, pic_name_unique):
-    fig = plot_weights(attributions, subticks_frequency=10, figsize=(50, 5))
-    fig.savefig(r"user_media/bio_" + pic_name_unique + ".png")
+    fig, ax = plt.subplots()
+    ax.bar(np.arange(1, 1001), z_scores)
+    fig.set_figwidth(50)
+    fig.set_figheight(5)
+    plt.savefig(r"../front_bioinf_project/src/media/bar_" + pic_name_unique + ".png")
     plt.close(fig)
     fig.clf()
     plt.clf()
 
 
-def get_single_experiment_scores(path_to_hg, path_to_net, chr, pos, nucleo, pic_name_unique):
+def plot_bioinf_weights(attributions, pic_name_unique):
+    fig = plot_weights(attributions, subticks_frequency=10, figsize=(50, 5))
+    fig.savefig(r"../front_bioinf_project/src/media/bio_" + pic_name_unique + ".png")
+    plt.close(fig)
+    fig.clf()
+    plt.clf()
 
-    # --- Preparing tensor from the input file ---
 
-    X_input = get_single_3d_feature_matrix(path_to_hg, chr, pos, nucleo)
+def get_single_experiment_scores(path_to_net, X_input):
     X_input = torch.from_numpy(X_input)
     X_input = X_input.float()
     X_input = X_input.permute(0, 2, 1).contiguous()
@@ -189,6 +223,20 @@ def get_single_experiment_scores(path_to_hg, path_to_net, chr, pos, nucleo, pic_
 
     attributions = attributions.cpu().numpy()
 
+    return attributions
+
+
+# ----- VIEWS IMPORTED part -----
+
+
+def get_self_input_single_experiment_scores(path_to_hg, path_to_net, chr, pos, nucleo, pic_name_unique):
+
+    # --- Preparing tensor from the input file ---
+
+    X_input = get_single_slice_3d_feature_matrix(path_to_hg, chr, pos, nucleo)
+
+    attributions = get_single_experiment_scores(path_to_net, X_input)
+
     z_scores = get_z_scores(attributions)
 
     plot_barplot(z_scores, pic_name_unique)
@@ -199,5 +247,29 @@ def get_single_experiment_scores(path_to_hg, path_to_net, chr, pos, nucleo, pic_
     for i in range(len(z_scores)):
         if abs(z_scores[i] > 3):
             most_features.append(pos - 500 + i)
+
+    return most_features
+
+
+def get_fasta_file_single_experiment_scores(path_to_net, file_readlines, pic_name_unique):
+
+    # --- Preparing tensor from the input file ---
+
+    X_input, ids = get_fasta_file_3d_feature_matrix(file_readlines)
+
+    attributions = get_single_experiment_scores(path_to_net, X_input)
+
+    z_scores = get_z_scores(attributions)
+
+    plot_barplot(z_scores, pic_name_unique)
+    plot_distplot(z_scores, pic_name_unique)
+    plot_bioinf_weights(attributions, pic_name_unique)
+
+    start_pos = int(ids[0])
+
+    most_features = []
+    for i in range(len(z_scores)):
+        if abs(z_scores[i] > 3):
+            most_features.append(start_pos + i)
 
     return most_features

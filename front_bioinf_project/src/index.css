@@ -1,19 +1,39 @@
 .type_choice_bar {
- display:inline-block;
+    display:inline-block;
 }
 
 .input_form_field {
- display:inline-block;
+    display:inline-block;
 }
 
 .input_form {
- display:inline-block;
+    width: 420px;
 }
 
 .file_input_form {
- display:inline-block;
+    width: 420px;
 }
 
 .message {
- font-size: 16px;
+    font-size: 16px;
+}
+
+.res_image_bio{
+    width: 1600px;
+    height: 250px;
+    clear: both;
+}
+
+.res_image_bar{
+    width: 1600px;
+    height: 250px;
+    clear: both;
+}
+
+.res_image_dist{
+    margin-left: 100px;
+}
+
+body {
+    background: #EDF5E1;
 }
